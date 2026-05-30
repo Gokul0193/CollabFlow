@@ -43,16 +43,16 @@ export const fetchAllProjects = async (req, res) => {
 export const fetchDomainProjects = async (req, res) => {
 
   try {
-    const { role, category } = req.body;
+    const { role, uid } = req.body;
 
-    if (!role || !category) {
+    if (!role || !uid) {
       return res.status(400).json({
         error: {
-          code: "project/internal-error", message: "missing category or role"
+          code: "project/internal-error", message: "missing uid or role"
         }
       })
     }
-    const projects = await getDomainProjects(role, category);
+    const projects = await getDomainProjects(role, uid);
     console.log("dimain project backend", projects);
 
 
@@ -132,7 +132,7 @@ export const fetchAllocatedProject = async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
+    res.status(500).json({
       error: {
         code: "project/fetch-error",
         message: error.message

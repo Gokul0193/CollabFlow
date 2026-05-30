@@ -42,7 +42,7 @@ export const getAllProjects = async () => {
 
 }
 
-export const getDomainProjects = async (role, category) => {
+export const getDomainProjects = async (role, uid) => {
 
     try {
         const response = await fetch(`${API_URL}/domainprojects`, {
@@ -50,7 +50,7 @@ export const getDomainProjects = async (role, category) => {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ role, category }),
+            body: JSON.stringify({ role, uid }),
         })
         const data = await response.json();
         console.log("data of doamin", data);

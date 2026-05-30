@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCm-1UIjk_vnHYFF_KptdYa3qRSi4bO_XA",
-  authDomain: "collabflow-816fc.firebaseapp.com",
-  projectId: "collabflow-816fc",
-  storageBucket: "collabflow-816fc.firebasestorage.app",
-  messagingSenderId: "166926184540",
-  appId: "1:166926184540:web:98b6044af835e7ab0c3699",
-  measurementId: "G-SQ2GFXEJHK"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
