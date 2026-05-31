@@ -17,12 +17,30 @@ import {
   CheckCircle2,
   Clock,
   Zap,
-  Briefcase
+  Briefcase,
+  ArrowLeft,
+  Calendar,
+  Sparkles,
+  Trash2,
+  CheckCircle
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { logout } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 import { getAllProjects, projectAdd } from "../services/projectService";
+import SelectedProjectView from "../components/project/SelectedProjectView";
+import { db } from "../firebase/firebase";
+import {
+  collection,
+  doc,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp
+} from "firebase/firestore";
 
 const AdminDashboard = () => {
   const { currentUser, setCurrentUser } = useAuth();
@@ -53,10 +71,18 @@ const AdminDashboard = () => {
   // Search filter
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Selected project for details view
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  // Cache list of all users to map uid to name/email
+  const [allUsers, setAllUsers] = useState({});
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const data = await getAllProjects();
+        console.log("projects", data);
+
         setProjects(data);
       } catch (error) {
         console.error("Failed to fetch projects via backend REST API:", error);
@@ -64,6 +90,26 @@ const AdminDashboard = () => {
     };
     fetchProjects();
   }, []);
+
+  // Fetch all users on mount to map uids to actual names/profiles
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usersMap = {};
+        querySnapshot.forEach((doc) => {
+          const u = doc.data();
+          usersMap[u.uid] = u;
+        });
+        setAllUsers(usersMap);
+      } catch (err) {
+        console.error("Error fetching users directory:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+
 
   // Handle outside dropdown click to close it
   useEffect(() => {
@@ -75,6 +121,8 @@ const AdminDashboard = () => {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+
 
   const handleLogoutClick = async () => {
     try {
@@ -304,182 +352,194 @@ const AdminDashboard = () => {
 
         {/* CORE CONTENT LAYOUT */}
         <div className="flex-grow p-6 space-y-8 select-none">
-          {/* Welcome Dashboard Header banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold text-zinc-100 tracking-tight">
-                Welcome back, <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">{getUserName()}</span>
-              </h1>
-              <p className="text-zinc-400 text-sm mt-1">
-                Here's what is happening across your CollabFlow workspaces today.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setModalOpen(true)}
-              className="flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:brightness-110 shadow-lg shadow-indigo-950/20 text-white font-semibold py-3 px-5 rounded-xl text-sm transition-all duration-300 transform active:scale-95 cursor-pointer"
-            >
-              <FolderPlus size={18} />
-              <span>Create Project</span>
-            </button>
-          </div>
-
-          {/* METRIC CARDS GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* CARD 1 */}
-            <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
-              <div className="space-y-2">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Total Projects</p>
-                <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{totalProjectsCount}</p>
-              </div>
-              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
-                <Briefcase size={20} />
-              </div>
-            </div>
-
-            {/* CARD 2 */}
-            <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
-              <div className="space-y-2">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Active Workspaces</p>
-                <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{activeProjectsCount}</p>
-              </div>
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl group-hover:scale-110 transition-transform">
-                <Zap size={20} />
-              </div>
-            </div>
-
-            {/* CARD 3 */}
-            <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
-              <div className="space-y-2">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Avg. Completion</p>
-                <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{avgCompletion}%</p>
-              </div>
-              <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl group-hover:scale-110 transition-transform">
-                <Clock size={20} />
-              </div>
-            </div>
-
-            {/* CARD 4 */}
-            <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
-              <div className="space-y-2">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Completed Projects</p>
-                <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{completedProjectsCount}</p>
-              </div>
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
-                <CheckCircle2 size={20} />
-              </div>
-            </div>
-          </div>
-
-          {/* PROJECT LIST SHEET */}
-          <div className="bg-zinc-900/30 backdrop-blur-lg border border-zinc-800/60 rounded-3xl overflow-hidden shadow-xl shadow-black/20">
-            <div className="p-6 border-b border-zinc-800/60 flex items-center justify-between flex-wrap gap-4">
-              <div className="space-y-0.5">
-                <h3 className="text-lg font-bold text-zinc-200">Active Workspaces</h3>
-                <p className="text-xs text-zinc-400">Manage, organize, and monitor project status and sprint timelines.</p>
-              </div>
-              <span className="text-xs font-semibold px-3 py-1 bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg">
-                {filteredProjects.length} Workspaces Found
-              </span>
-            </div>
-
-            {filteredProjects.length === 0 ? (
-              <div className="p-16 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="p-4 bg-zinc-800/40 border border-zinc-700/60 text-zinc-500 rounded-full">
-                  <FolderGit2 size={36} />
+          {selectedProject ? (
+            <SelectedProjectView
+              selectedProject={selectedProject}
+              onBack={() => setSelectedProject(null)}
+              allUsers={allUsers}
+            />
+          ) : (
+            /* STANDARD MAIN DASHBOARD VIEW */
+            <>
+              {/* Welcome Dashboard Header banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-extrabold text-zinc-100 tracking-tight">
+                    Welcome back, <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">{getUserName()}</span>
+                  </h1>
+                  <p className="text-zinc-400 text-sm mt-1">
+                    Here's what is happening across your CollabFlow workspaces today.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-zinc-300 font-semibold">No workspaces found</p>
-                  <p className="text-zinc-500 text-xs max-w-sm">No active project matches your search query. Try typing another name or create a new workspace!</p>
+
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:brightness-110 shadow-lg shadow-indigo-950/20 text-white font-semibold py-3 px-5 rounded-xl text-sm transition-all duration-300 transform active:scale-95 cursor-pointer"
+                >
+                  <FolderPlus size={18} />
+                  <span>Create Project</span>
+                </button>
+              </div>
+
+              {/* METRIC CARDS GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* CARD 1 */}
+                <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
+                  <div className="space-y-2">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Total Projects</p>
+                    <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{totalProjectsCount}</p>
+                  </div>
+                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <Briefcase size={20} />
+                  </div>
+                </div>
+
+                {/* CARD 2 */}
+                <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
+                  <div className="space-y-2">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Active Workspaces</p>
+                    <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{activeProjectsCount}</p>
+                  </div>
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <Zap size={20} />
+                  </div>
+                </div>
+
+                {/* CARD 3 */}
+                <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
+                  <div className="space-y-2">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Avg. Completion</p>
+                    <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{avgCompletion}%</p>
+                  </div>
+                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <Clock size={20} />
+                  </div>
+                </div>
+
+                {/* CARD 4 */}
+                <div className="bg-zinc-900/40 border border-zinc-800/70 p-5 rounded-2xl flex items-center justify-between hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300 group shadow-md shadow-black/10">
+                  <div className="space-y-2">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Completed Projects</p>
+                    <p className="text-3xl font-extrabold text-zinc-100 tracking-tight">{completedProjectsCount}</p>
+                  </div>
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <CheckCircle2 size={20} />
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-900 text-left bg-zinc-950/20 text-xs font-bold text-zinc-400 uppercase tracking-wider select-none">
-                      <th className="py-4 px-6">Workspace Name</th>
-                      <th className="py-4 px-6">Domain</th>
-                      <th className="py-4 px-6">Team Size</th>
-                      <th className="py-4 px-6">Milestone Progress</th>
-                      <th className="py-4 px-6">Status</th>
-                      <th className="py-4 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProjects.map((p) => (
-                      <tr
-                        key={p.id || p.pid}
-                        className="border-b border-zinc-900 hover:bg-zinc-900/20 transition-colors duration-200 text-sm text-zinc-300 group"
-                      >
-                        <td className="py-4.5 px-6 font-semibold text-zinc-200">
-                          {p.name}
-                        </td>
-                        <td className="py-4.5 px-6 text-xs font-medium text-zinc-400">
-                          <span className="px-2.5 py-1 bg-zinc-800/80 border border-zinc-700/50 rounded-lg text-indigo-400">
-                            {p.category}
-                          </span>
-                        </td>
-                        <td className="py-4.5 px-6">
-                          <div className="flex flex-col space-y-1">
-                            <div className="flex items-center -space-x-1.5 select-none">
-                              {p.members && p.members.length > 0 ? (
-                                [...Array(Math.min(p.members.length, 4))].map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className="w-6.5 h-6.5 rounded-full border border-zinc-900 flex items-center justify-center text-[9px] font-bold text-white bg-indigo-500"
-                                    style={{
-                                      backgroundColor: i === 0 ? "#6366f1" : i === 1 ? "#8b5cf6" : i === 2 ? "#06b6d4" : "#10b981"
-                                    }}
-                                  >
-                                    {String.fromCharCode(65 + i * 4 + (p.pid || p.id || "a").charCodeAt(0))}
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-[10px] text-zinc-500 italic">No members yet</span>
-                              )}
-                              {p.members && p.members.length > 4 && (
-                                <div className="w-6.5 h-6.5 rounded-full border border-zinc-900 flex items-center justify-center text-[9px] font-bold bg-zinc-800 text-zinc-400">
-                                  +{p.members.length - 4}
+
+              {/* PROJECT LIST SHEET */}
+              <div className="bg-zinc-900/30 backdrop-blur-lg border border-zinc-800/60 rounded-3xl overflow-hidden shadow-xl shadow-black/20">
+                <div className="p-6 border-b border-zinc-800/60 flex items-center justify-between flex-wrap gap-4">
+                  <div className="space-y-0.5">
+                    <h3 className="text-lg font-bold text-zinc-200">Active Workspaces</h3>
+                    <p className="text-xs text-zinc-400">Manage, organize, and monitor project status and sprint timelines.</p>
+                  </div>
+                  <span className="text-xs font-semibold px-3 py-1 bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg">
+                    {filteredProjects.length} Workspaces Found
+                  </span>
+                </div>
+
+                {filteredProjects.length === 0 ? (
+                  <div className="p-16 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="p-4 bg-zinc-800/40 border border-zinc-700/60 text-zinc-500 rounded-full">
+                      <FolderGit2 size={36} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-zinc-300 font-semibold">No workspaces found</p>
+                      <p className="text-zinc-500 text-xs max-w-sm">No active project matches your search query. Try typing another name or create a new workspace!</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-900 text-left bg-zinc-950/20 text-xs font-bold text-zinc-400 uppercase tracking-wider select-none">
+                          <th className="py-4 px-6">Workspace Name</th>
+                          <th className="py-4 px-6">Domain</th>
+                          <th className="py-4 px-6">Team Size</th>
+                          <th className="py-4 px-6">Milestone Progress</th>
+                          <th className="py-4 px-6">Status</th>
+                          <th className="py-4 px-6 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProjects.map((p) => (
+                          <tr
+                            key={p.id || p.pid}
+                            onClick={() => setSelectedProject(p)}
+                            className="border-b border-zinc-900 hover:bg-zinc-900/20 transition-colors duration-200 text-sm text-zinc-300 group cursor-pointer"
+                          >
+                            <td className="py-4.5 px-6 font-semibold text-zinc-200">
+                              {p.name}
+                            </td>
+                            <td className="py-4.5 px-6 text-xs font-medium text-zinc-400">
+                              <span className="px-2.5 py-1 bg-zinc-800/80 border border-zinc-700/50 rounded-lg text-indigo-400">
+                                {p.category}
+                              </span>
+                            </td>
+                            <td className="py-4.5 px-6">
+                              <div className="flex flex-col space-y-1">
+                                <div className="flex items-center -space-x-1.5 select-none">
+                                  {p.members && p.members.length > 0 ? (
+                                    [...Array(Math.min(p.members.length, 4))].map((_, i) => (
+                                      <div
+                                        key={i}
+                                        className="w-6.5 h-6.5 rounded-full border border-zinc-900 flex items-center justify-center text-[9px] font-bold text-white bg-indigo-500"
+                                        style={{
+                                          backgroundColor: i === 0 ? "#6366f1" : i === 1 ? "#8b5cf6" : i === 2 ? "#06b6d4" : "#10b981"
+                                        }}
+                                      >
+                                        {String.fromCharCode(65 + i * 4 + (p.pid || p.id || "a").charCodeAt(0))}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-[10px] text-zinc-500 italic">No members yet</span>
+                                  )}
+                                  {p.members && p.members.length > 4 && (
+                                    <div className="w-6.5 h-6.5 rounded-full border border-zinc-900 flex items-center justify-center text-[9px] font-bold bg-zinc-800 text-zinc-400">
+                                      +{p.members.length - 4}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-zinc-500 font-semibold">{(p.members ? p.members.length : 0)} / {p.teamSize} joined</span>
-                          </div>
-                        </td>
-                        <td className="py-4.5 px-6">
-                          <div className="flex items-center space-x-3 min-w-[120px]">
-                            <div className="flex-1 w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-800/30">
-                              <div
-                                className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-500"
-                                style={{ width: `${p.progress}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-xs font-bold text-zinc-400">{p.progress}%</span>
-                          </div>
-                        </td>
-                        <td className="py-4.5 px-6">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${p.status === "Completed"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : p.status === "Review"
-                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                              : "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                            }`}>
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="py-4.5 px-6 text-right">
-                          <button className="p-2 bg-zinc-900/60 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 border border-zinc-800/80 group-hover:border-indigo-500/20 text-zinc-400 rounded-lg transition-all duration-300">
-                            <ArrowUpRight size={15} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                                <span className="text-[10px] text-zinc-500 font-semibold">{(p.members ? p.members.length : 0)} / {p.teamSize} joined</span>
+                              </div>
+                            </td>
+                            <td className="py-4.5 px-6">
+                              <div className="flex items-center space-x-3 min-w-[120px]">
+                                <div className="flex-1 w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-800/30">
+                                  <div
+                                    className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${p.progress}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-xs font-bold text-zinc-400">{p.progress}%</span>
+                              </div>
+                            </td>
+                            <td className="py-4.5 px-6">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${p.status === "Completed"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : p.status === "Review"
+                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                  : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                }`}>
+                                {p.status}
+                              </span>
+                            </td>
+                            <td className="py-4.5 px-6 text-right">
+                              <button className="p-2 bg-zinc-900/60 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 border border-zinc-800/80 group-hover:border-indigo-500/20 text-zinc-400 rounded-lg transition-all duration-300">
+                                <ArrowUpRight size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </main>
 

@@ -39,14 +39,14 @@ const TaskSummary = ({ tasks = [], onUpdateStatus }) => {
 
   const displayTasks = tasks.length > 0 ? tasks : defaultTasks;
 
-  const todoTasks = displayTasks.filter(t => t.status === "To Do");
+  const todoTasks = displayTasks.filter(t => t.status === "To Do" || t.status === "nocompleted" || t.status === "todo");
   const inProgressTasks = displayTasks.filter(t => t.status === "In Progress");
   const reviewTasks = displayTasks.filter(t => t.status === "Review");
   const completedTasks = displayTasks.filter(t => t.status === "Completed");
 
   const handleToggleStatus = (task) => {
     let nextStatus = "To Do";
-    if (task.status === "To Do" || task.status === "todo") nextStatus = "In Progress";
+    if (task.status === "To Do" || task.status === "todo" || task.status === "nocompleted") nextStatus = "In Progress";
     else if (task.status === "In Progress") nextStatus = "Review";
     else if (task.status === "Review") nextStatus = "Completed";
     else if (task.status === "Completed") nextStatus = "To Do";

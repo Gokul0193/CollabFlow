@@ -124,3 +124,27 @@ export const getAllocatedProject = async (role, uid) => {
     }
 
 }
+export const getProjectMembers = async (uid) => {
+    try {
+
+        const response = await fetch(`${API_URL}/getmembers`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ uid })
+        })
+
+        const data = await response.json();
+        if (!response.ok) {
+            const error = new Error(data.error?.message || "allocated project are not fetched")
+            error.code = data.error?.code
+            throw error
+        }
+        return data;
+    } catch (error) {
+        console.error("error in fetching members", error);
+        throw error;
+    }
+
+}

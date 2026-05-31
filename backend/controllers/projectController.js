@@ -1,4 +1,4 @@
-import { CreatProject, getAllocatedProject, getAllProjects, getDomainProjects, joinProject } from "../services/dbService.js";
+import { CreatProject, getAllocatedProject, getAllProjects, getDomainProjects, getMembersById, joinProject } from "../services/dbService.js";
 
 /**
  * Controller to handle SaaS Project creations
@@ -139,6 +139,39 @@ export const fetchAllocatedProject = async (req, res) => {
       }
     });
 
+  }
+
+}
+
+export const getProjectMembers = async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (!uid) {
+      return res.status(400).json({
+        error: {
+          code: "project/internal-error", message: "missing uids"
+        }
+      });
+    }
+    const member = await getMembersById(uid);
+
+    if (!member.length) {
+      return res.status(404).json({
+        error: {
+          code: "project/not-found", message: "No members found for the given uids"
+        }
+      })
+    }
+    res.status(200).json(member);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: {
+        code: "project/fetch-error",
+        message: error.message
+      }
+    })
   }
 
 }

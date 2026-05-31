@@ -145,3 +145,30 @@ export const getAllocatedProject = async (role, uid) => {
   }
 }
 
+export const getMembersById = async (uid) => {
+  try {
+    const members = [];
+    for (const id of uid) {
+      const userRef = db.collection("users").doc(id);
+      const snapshot = await userRef.get();
+
+      if (snapshot.exists) {
+        const userData = snapshot.data();
+
+        members.push({
+          uid: userData.uid,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+        });
+      }
+    }
+
+
+    return members;
+  } catch (error) {
+    console.log("Error in backend getMembersById:", error);
+    throw error;
+  }
+}
+

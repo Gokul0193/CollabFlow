@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js"
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.get("/health", (req, res) => {
 // Mounted Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
+app.use("/api/task", taskRoutes);
 
 // Start Server
 app.listen(PORT, () => {
